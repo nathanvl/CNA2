@@ -21,8 +21,8 @@ class Client {
 			System.out.println("Send to server:");
 			BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
 			
-			byte[] sendData = new byte[1024];
-			byte[] receiveData = new byte[1024];
+			byte[] sendData = new byte[40000];
+			byte[] receiveData = new byte[40000];
 			
 			sentence = inFromUser.readLine();	//read from user input, and then send it.
 			System.out.println("Sending...");
