@@ -31,6 +31,8 @@ public class Message {
 		read_data();
 	}
 	
+	public Message()
+	
 	public void read_data(){
 		op = data[0];
 		htype = data[1];
