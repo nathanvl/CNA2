@@ -35,10 +35,11 @@ public class Message {
     /** The array where the data is kept together.**/
 	byte[] data;
 	
-	DatagramPacket packet;
+	private DatagramPacket packet;
 	
 	/**
 	 * Create a message from a received DatagramPacket, so operations on it are possible.
+	 * 
 	 * @param received_packet
 	 */
 	public Message(DatagramPacket received_packet){
@@ -47,17 +48,20 @@ public class Message {
 		read_data();
 	}
 	
+	/**
+	 * Returns the data in the message, after concatenating all the elements.
+	 * The function also prints all the data in Hex.
+	 * 
+	 * @return 
+	 */
 	public byte[] get_data(){
 		concatenate_message();
-//		System.out.println("Contents: ");
-//		System.out.println(toHex(data));
-//		System.out.println("---------");
+		System.out.println("Contents: ");
+		System.out.println(toHex(data));
+		System.out.println("---------");
 		return data;
 	}
-	
-	public String return_hex_dump(){
-		return toHex(data);
-	}
+
 	/**
 	 * Reads out the data into the protocols' chunks.
 	 */
@@ -81,7 +85,11 @@ public class Message {
 	}
 	
 
-	
+	/**
+	 * Create a Message based on the type of message you want to send.
+	 * 
+	 * @param type
+	 */
 	public Message(String type){
 		if (type == "DHCPDISCOVER"){	//REQUEST
 			set_op("Client");
@@ -112,12 +120,18 @@ public class Message {
 		
 	}
 	
+	/**
+	 * Sets option 53 to an int. This option stores what kind of DHCP message is sent.
+	 * @param type_int
+	 */
 	private void set_option53(int type_int) {
 		byte[] option_53 = {53, 1, (byte) type_int};
 		options = option_53;
-		
 	}
-
+	
+	/**
+	 * Concatenates all the message segments into one big data byte array.
+	 */
 	private void concatenate_message() {
 		byte[] message = op;
 		message = concatenate_two(message,htype);
@@ -182,7 +196,9 @@ public class Message {
 		else throw new IllegalArgumentException();
 	}
 	
-
+	/**
+	 * Returns the value of option 53, which defines the type of DHCP message.
+	 */
 	private int get_option53(){
 		for (int index = 0; index < options.length; index++){
 			if ( ((options[index] & 0xff) == 53) && ((options[index+1] & 0xff) == 1)){
@@ -193,6 +209,11 @@ public class Message {
 		return 0;
 	}
 	
+	/**
+	 * Returns the leasetime that is given after an OFFER or ACK.
+	 * 
+	 * @return the bytearray with the leasetime if there is an option 51, otherwise null.
+	 */
 	public byte[] get_leasetime(){
 		for (int index = 0; index < options.length; index++){
 			if ( ((options[index] & 0xff) == 51) && ((options[index+1] & 0xff) == 4)){
@@ -244,14 +265,12 @@ public class Message {
 		return packet.getAddress();
 	}
 	
-	
-	
-	private static final char[] HEX_DIGITS = "0123456789abcdef".toCharArray();
 	/**
 	 * Convert a bytearray into a string in hexadecimals.
 	 * @param bytes
 	 * @return
 	 */
+	private static final char[] HEX_DIGITS = "0123456789abcdef".toCharArray();
 	public static String toHex(byte[] bytes){
         char[] c = new char[bytes.length*2];
         int index = 0;
@@ -263,55 +282,125 @@ public class Message {
         return new String(c);
     }
 	
+	/**
+	 * Returns the xid field in a Hex value.
+	 */
 	public String getTransactionID(){
 		return toHex(xid);
 	}
+	
+	/**
+	 * Returns the xid field byte.
+	 */
 	public byte[] get_raw_transaction_id(){
 		return xid;
 	}
 	
+	/**
+	 * Prepares a message if it needs to be sent by a client.
+	 * In that case, the xid, ciaddr and chaddr are set to the appropriate values.
+	 * Therefore the transaction ID (client_id),
+	 * client IP and MAC address of the client need to be given.
+	 * 
+	 * @param client_id
+	 * @param client_IP
+	 * @param MACAddress
+	 */
 	public void client(Integer client_id, InetAddress client_IP, byte[] MACAddress) {
 		xid = int_to_byte_array(client_id, xid.length);
 		ciaddr = client_IP.getAddress();
 		chaddr = MACAddress;
-		secs = new byte[] {0,20};
+		secs = new byte[] {0,0};
 	}
+	
+	/**
+	 * This function prepares a message that needs to be sent by a server.
+	 * It sets the xid and chaddr fields using the given parameters.
+	 * 
+	 * @param MAC
+	 * @param transaction_id
+	 */
 	public void server(byte[] MAC, byte[] transaction_id){
 		setTransactionID(transaction_id);
 		setMAC(MAC);
 	}
 	
-	
+	/**
+	 * This function returns the chaddr field.
+	 */
 	public byte[] getMacAddress(){
 		return chaddr;
 	}
+	
+	/**
+	 * This function sets the chaddr field to the given byte array.
+	 * @param MACAddress
+	 */
 	private void setMAC(byte[] MACAddress){
 		chaddr = MACAddress;
 	}
 	
+	/**
+	 * This function converts an int to a byte array with the given length.
+	 * 
+	 * @param a
+	 * @param length
+	 * 
+	 * @return the integer.
+	 */
 	public byte[] int_to_byte_array(Integer a, Integer length){
 		return ByteBuffer.allocate(length).putInt(a).array();
 	}
 
+	/**
+	 * This function sets the xid to the given byte array.
+	 * @param transaction_id
+	 */
 	public void setTransactionID(byte[] transaction_id) {
 		xid = transaction_id;
 		
 	}
-
+	
+	/**
+	 * This function sets the yiaddr field to the given IP address,
+	 * in byte[] format.
+	 * 
+	 * @param IP_address
+	 */
 	public void offerIP(byte[] IP_address) {
 		yiaddr = IP_address;
 	}
-
+	
+	/**
+	 * This method sets option 51 (leasetime) to the given integer.
+	 * The integer denotes the amount of seconds the IP will be valid
+	 * for.
+	 * 
+	 * @param time
+	 */
 	public void leaseTime(int time) {
 		set_option51(int_to_byte_array(time, 4));
 	}
 	
-	
+	/**
+	 * This function sets option 54 to the given address.
+	 * Option 54 stores the server IP to which a client
+	 * should answer.
+	 * 
+	 * @param server_address
+	 */
 	public void setServerIP(byte[] server_address){
 		byte[] option_54 = {54, 4};
 		option_54 = concatenate_two(option_54, server_address);
 		options = concatenate_two(options, option_54);
 	}
+	
+	/**
+	 * This function returns the address stored in option 54.
+	 * 
+	 * @return This server address is returned in the form of a byte array,
+	 * or null if option 54 is not found.
+	 */
 	public byte[] get_option54(){
 		for (int index = 0; index < options.length; index++){
 			if ( ((options[index] & 0xff) == 54) && ((options[index+1] & 0xff) == 4)){
@@ -322,19 +411,48 @@ public class Message {
 		return null;
 	}
 	
+	/**
+	 * This function sets option 51 to the given byte array.
+	 * Option 51 kep strack of the leasetime of an IP address.
+	 * 
+	 * @param time
+	 */
 	private void set_option51(byte[] time) {
 		byte[] option_51 = {51, 4};
 		option_51 = concatenate_two(option_51,time);
 		options = concatenate_two(options, option_51);
 	}
+	
+	/**
+	 * This function returns the yiaddr field, in which an offered
+	 * IP address is stored.
+	 * 
+	 * @return
+	 */
 	public byte[] offered(){
 		return yiaddr;
 	}
+	
+	/**
+	 * This function stores a given IP address in option 50, so that it
+	 * can be used in a DHCPREQUEST.
+	 * 
+	 * @param IP_address
+	 */
 	public void request(byte[] IP_address){
 		byte[] option_50 = {50, 4};
 		option_50 = concatenate_two(option_50,IP_address);
 		options = concatenate_two(options, option_50);
 	}
+	
+	/**
+	 * This method returns the address stored in option 50.
+	 * This address is a requested address by a client.
+	 * Therefore this function should typically be called by
+	 * a server after receiving a DHCPREQUEST.
+	 * 
+	 * @return
+	 */
 	public byte[] get_option50(){
 		for (int index = 0; index < options.length; index++){
 			if ( ((options[index] & 0xff) == 50) && ((options[index+1] & 0xff) == 4)){

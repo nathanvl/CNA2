@@ -2,7 +2,17 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 
+/**
+ * A class to start a UDP server with certain DHCP functions implemented. To start
+ * the server, the main method needs to be run.
+ * @author Nathan Van Laere
+ *
+ */
 class SilentServer{
+	/**
+	 * A boolean to store whether the current IP/transationID combination can be
+	 * acknowledged. If not, this boolean needs to be set "true".
+	 */
 	private static boolean NAK = false;
 	
 	public static void main(String args[]) throws Exception{
@@ -28,16 +38,15 @@ class SilentServer{
 				System.out.println("SENT: " + answer.type_of_message());
 				printStatus();
 			}
-			
 		}
 		serverSocket.close();
-	
 	}
+	
 	/**
 	 * Returns the answer to be sent upon receiving a certain question.
 	 * 
-	 * @param question
-	 * @return answer
+	 * @param question is the question in a Message object.
+	 * @return answer the answer, also in a Message object.
 	 */
 	private static Message answer(Message question) throws Exception{
 		InetAddress server_IP = InetAddress.getByName("localhost");
@@ -55,7 +64,6 @@ class SilentServer{
 			if (!allocate_address){
 				NAK = true;
 			}
-			NAK = true;
 			if (!NAK){
 				answer = new Message("DHCPACK");
 				byte[] IP_address = question.get_option50();
@@ -87,13 +95,21 @@ class SilentServer{
 		return answer;
 		
 	}
-
+	
+	/**
+	 * Some arrays to store the IPs to hand out, assigned MAC addresses and transaction IDs and
+	 * the current state of the IPs (taken or not).
+	 */
 	private static byte[][] mac_addresses = {null, null, null, null};
 	private static String[] transaction_ids = {null, null, null, null};
 	private static boolean[] taken = {false, false, false, false};
 	private static byte[][] available_IPs = {{(byte) 0xC0, (byte) 0xA8, 0x01, 0x61}, {(byte) 0xC0, (byte) 0xA8, 0x01, 0x62},
 			{(byte) 0xC0, (byte) 0xA8, 0x01, 0x63}, {(byte) 0xC0, (byte) 0xA8, 0x01, 0x64}};
 	
+	/**
+	 * A function that prints the current state of the IP list, more precisely:
+	 * which ones are currently leased and to which MAC Address.
+	 */
 	private static void printStatus(){
 		boolean used = false;
 		int i = 0;
@@ -110,7 +126,13 @@ class SilentServer{
 		
 	}
 	
-	
+	/**
+	 * This function is called after DHCPRELEASE is received from a client.
+	 * It changes the arrays in such a way that the transaction ID is not anymore
+	 * linked to the IP addresses. 
+	 * 
+	 * @param transaction_id the transaction ID of the binding that needs to be removed.
+	 */
 	private static void release_IP(String transaction_id){
 		int i = 0;
 		while(i < 4){
@@ -126,6 +148,19 @@ class SilentServer{
 		System.out.println("No IP leased with that transaction ID.");
 	}
 	
+	/**
+	 * This function is the opposite of release_IP, and links a transactionID and
+	 * MACaddress with a certain IP. First it checks whether there are IPs available,
+	 * and when it has chosen one, it returns that one to the caller. It is important
+	 * to note, however, that taken[i] is not set to true, because that only happens
+	 * when an ACK is sent. The links are set, so that it can be checked whether this client
+	 * has asked for this IP address yet.
+	 * 
+	 * @param transaction_id a string with the transaction ID.
+	 * @param MACAddress the MACAddress in byte[] form.
+	 * 
+	 * @return the leased IP address.
+	 */
 	private static byte[] lend_IP(String transaction_id, byte[] MACAddress) {
 		int i = 0;
 		while(i<4){
@@ -142,6 +177,17 @@ class SilentServer{
 		return available_IPs[0];
 	}
 	
+	/**
+	 * This function actually links the IP and transaction ID together. It does this
+	 * by blocking an IP, so that other clients can not get it assigned. 
+	 * 
+	 * @param transactionID
+	 * @param MACAddress
+	 * 
+	 * @return true if the IP was succesfully blocked, false if that was not possible.
+	 * Possible reasons for a false return are that the transaction ID was not linked
+	 * before to an IP.
+	 */
 	private static boolean block_IP(String transactionID, byte[] MACAddress) {
 		int i = 0;
 		while(i<4){
@@ -157,12 +203,13 @@ class SilentServer{
 		return false;
 	}
 	
-	private static final char[] HEX_DIGITS = "0123456789abcdef".toCharArray();
 	/**
 	 * Convert a bytearray into a string in hexadecimals.
-	 * @param bytes
-	 * @return
+	 * 
+	 * @param bytes The bytearray that is to be converted.
+	 * @return the String, without 0x in front.
 	 */
+	private static final char[] HEX_DIGITS = "0123456789abcdef".toCharArray();
 	public static String toHex(byte[] bytes){
         char[] c = new char[bytes.length*2];
         int index = 0;
@@ -173,6 +220,4 @@ class SilentServer{
         }
         return new String(c);
     }
-	
-
 }
