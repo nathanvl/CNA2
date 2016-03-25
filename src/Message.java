@@ -462,5 +462,4 @@ public class Message {
 		System.out.println("Option 50 not found!");
 		return null;
 	}
-
 }

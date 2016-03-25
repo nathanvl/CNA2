@@ -8,7 +8,7 @@ import java.net.InetAddress;
  * @author Nathan Van Laere
  *
  */
-class SilentServer{
+class demoServer{
 	/**
 	 * A boolean to store whether the current IP/transationID combination can be
 	 * acknowledged. If not, this boolean needs to be set "true".

@@ -9,7 +9,7 @@ import java.util.Random;
  * @author Nathan Van Laere
  *
  */
-class SilentClient {
+class demoClient {
 	
 	/**
 	 * Some self-explanatory constants.
