@@ -56,10 +56,13 @@ public class Message {
 	 */
 	public byte[] get_data(){
 		concatenate_message();
-		System.out.println("Contents: ");
+		return data;
+	}
+	
+	public void hexdump(){
+		System.out.println("Contents of " + type_of_message() + ": ");
 		System.out.println(toHex(data));
 		System.out.println("---------");
-		return data;
 	}
 
 	/**
@@ -413,7 +416,7 @@ public class Message {
 	
 	/**
 	 * This function sets option 51 to the given byte array.
-	 * Option 51 kep strack of the leasetime of an IP address.
+	 * Option 51 keeps strack of the leasetime of an IP address.
 	 * 
 	 * @param time
 	 */
@@ -424,13 +427,23 @@ public class Message {
 	}
 	
 	/**
-	 * This function returns the yiaddr field, in which an offered
+	 * This function returns the yiaddr field as a byte array, in which an offered
 	 * IP address is stored.
 	 * 
 	 * @return
 	 */
 	public byte[] offered(){
 		return yiaddr;
+	}
+	
+	/**
+	 * This function returns the yiaddr field as a string, in which an offered
+	 * IP address is stored.
+	 * 
+	 * @return
+	 */
+	public String offeredString(){
+		return toHex(yiaddr);
 	}
 	
 	/**

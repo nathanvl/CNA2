@@ -27,6 +27,7 @@ class demoServer{
 			serverSocket.receive(receivePacket);
 			Message question = new Message(receivePacket);
 			System.out.println("RECEIVED: " + question.type_of_message());
+			question.hexdump();
 			printStatus();
 			InetAddress IPAddress = receivePacket.getAddress();
 			int port = receivePacket.getPort();
@@ -36,6 +37,7 @@ class demoServer{
 				DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, port);
 				serverSocket.send(sendPacket);
 				System.out.println("SENT: " + answer.type_of_message());
+				answer.hexdump();
 				printStatus();
 			}
 		}

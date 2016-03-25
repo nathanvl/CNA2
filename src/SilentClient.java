@@ -38,9 +38,9 @@ class SilentClient {
 		Integer client_id = r.nextInt(999999999);	//transaction ID
 		System.out.println("My transaction ID is: " + client_id);
 		client_IP = InetAddress.getByName("10.43.101.54");	//FILL IN CORRECTLY IN ADVANCE
-//		InetAddress IPAddress = InetAddress.getByName("10.33.14.246");	//DHCP TEST SERVER
+		InetAddress IPAddress = InetAddress.getByName("10.33.14.246");	//DHCP TEST SERVER
 		
-		InetAddress IPAddress = InetAddress.getByName("localhost");
+//		InetAddress IPAddress = InetAddress.getByName("localhost");
 		DatagramSocket clientSocket = new DatagramSocket();
 		
 		System.out.println("				--------------------START--------------------");
