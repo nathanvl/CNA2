@@ -4,7 +4,6 @@ import java.net.InetAddress;
 import java.util.Random;
 
 class SilentClient {
-	private static byte[] oldData = new byte[1024];
 	private static byte[] sendData = new byte[1024];
 	private static byte[] receiveData = new byte[1024];
 	private static InetAddress client_IP;
@@ -12,13 +11,8 @@ class SilentClient {
 	private static int port = 1234;
 	
 	private static void prepareForNext(){
-		oldData = receiveData;
 		sendData = new byte[1024];
 		receiveData = new byte[1024];
-	}
-	
-	private void sendAndReceive(){
-		
 	}
 	public static void main(String args[]) throws Exception{
 		Random r = new Random();
@@ -29,7 +23,7 @@ class SilentClient {
 		InetAddress IPAddress = InetAddress.getByName("localhost");
 		DatagramSocket clientSocket = new DatagramSocket();
 		
-
+		System.out.println("				--------------------START--------------------");
 		Message question = new Message("DHCPDISCOVER");
 		question.client(client_id, client_IP, MACAddress);
 		sendData = question.get_data();
@@ -47,25 +41,46 @@ class SilentClient {
 			prepareForNext();
 			question = new Message("DHCPREQUEST");
 			question.client(client_id, client_IP, MACAddress);
-			
+			question.setServerIP(answer.get_option54());
+			question.request(answer.offered());
 			sendData = question.get_data();
+			
+			sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, port);
+			clientSocket.send(sendPacket);
+			System.out.println("SENT MESSAGE: " + question.type_of_message());
+			
+			receivePacket = new DatagramPacket(receiveData, receiveData.length); //wait and receive answer
+			clientSocket.receive(receivePacket);
+			
+			answer = new Message(receivePacket);
+			System.out.println("RECEIVED MESSAGE: " + answer.type_of_message());
+			if (answer.type_of_message() == "DHCPACK"){
+				System.out.println("Got an IP address, we're happy.");
+				System.out.println("Now let's get rid of it by sending a DHCPRELEASE.");
+				prepareForNext();
+				question = new Message("DHCPRELEASE");
+				question.client(client_id, client_IP, MACAddress);
+				sendData = question.get_data();
+				
+				sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, port);
+				clientSocket.send(sendPacket);
+				System.out.println("SENT MESSAGE: " + question.type_of_message());
+			}
+			else if (answer.type_of_message() == "DHCPNAK"){
+				System.out.println("This means the server does not agree with our request. Try again later.");
+			}
+			else{
+				System.out.println("Server answered, but not with an offer." +
+						" Instead, what we got is: " + answer.type_of_message());
+			}
 		}
 		else{
-			System.out.println("Server answered, but not with an offer. Instead, what we got is: " + answer.type_of_message());
+			System.out.println("Server answered, but not with an offer." +
+					" Instead, what we got is: " + answer.type_of_message());
 		}
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
+
 		clientSocket.close();
-		System.out.println("Socket closed!		--------------------END--------------------");
+		System.out.println("Socket closed!");
+		System.out.println("				--------------------END--------------------");
 	}
 }

@@ -28,7 +28,7 @@ public class Message {
     private byte[] chaddr = new byte[16]; // Client HW address (16)
     private byte[] sname = new byte[64]; // Optional server host name (64)
     private byte[] file = new byte[128]; // Boot file name (128)
-    private byte[] magic_cookie = {0x63, (byte) 0x82, 0x53, 0x63};
+    private byte[] magic_cookie = {0x63,  (byte) 0x82, 0x53, 0x63};
     private byte[] options; //options (rest)
     private 
     
@@ -49,6 +49,9 @@ public class Message {
 	
 	public byte[] get_data(){
 		concatenate_message();
+//		System.out.println("Contents: ");
+//		System.out.println(toHex(data));
+//		System.out.println("---------");
 		return data;
 	}
 	
@@ -303,17 +306,43 @@ public class Message {
 		set_option51(int_to_byte_array(time, 4));
 	}
 	
-	private void set_option54(byte[] server_address){
+	
+	public void setServerIP(byte[] server_address){
 		byte[] option_54 = {54, 4};
 		option_54 = concatenate_two(option_54, server_address);
 		options = concatenate_two(options, option_54);
 	}
-	
+	public byte[] get_option54(){
+		for (int index = 0; index < options.length; index++){
+			if ( ((options[index] & 0xff) == 54) && ((options[index+1] & 0xff) == 4)){
+				return Arrays.copyOfRange(options, index+2, index+6);
+			}
+		}
+		System.out.println("Option 54 not found!");
+		return null;
+	}
 	
 	private void set_option51(byte[] time) {
 		byte[] option_51 = {51, 4};
 		option_51 = concatenate_two(option_51,time);
 		options = concatenate_two(options, option_51);
+	}
+	public byte[] offered(){
+		return yiaddr;
+	}
+	public void request(byte[] IP_address){
+		byte[] option_50 = {50, 4};
+		option_50 = concatenate_two(option_50,IP_address);
+		options = concatenate_two(options, option_50);
+	}
+	public byte[] get_option50(){
+		for (int index = 0; index < options.length; index++){
+			if ( ((options[index] & 0xff) == 50) && ((options[index+1] & 0xff) == 4)){
+				return Arrays.copyOfRange(options, index+2, index+6);
+			}
+		}
+		System.out.println("Option 50 not found!");
+		return null;
 	}
 
 }

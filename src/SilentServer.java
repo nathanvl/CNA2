@@ -1,10 +1,12 @@
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.MulticastSocket;
 
 class SilentServer{
+	private static boolean NAK = false;
+	
 	public static void main(String args[]) throws Exception{
+		printStatus();
 		DatagramSocket serverSocket = new DatagramSocket(1234);
 		Boolean stop = false;
 		while(!stop){
@@ -14,16 +16,19 @@ class SilentServer{
 			DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
 			serverSocket.receive(receivePacket);
 			Message question = new Message(receivePacket);
-			System.out.println("RECEIVED A MESSAGE: " + question.type_of_message());
-			
+			System.out.println("RECEIVED: " + question.type_of_message());
+			printStatus();
 			InetAddress IPAddress = receivePacket.getAddress();
 			int port = receivePacket.getPort();
 			Message answer = answer(question);
-			sendData = answer.get_data();
+			if (!(question.type_of_message() == "DHCPRELEASE")){
+				sendData = answer.get_data();
+				DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, port);
+				serverSocket.send(sendPacket);
+				System.out.println("SENT: " + answer.type_of_message());
+				printStatus();
+			}
 			
-			DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, port);
-			serverSocket.send(sendPacket);
-			System.out.println("SENT AN ANSWER: " + answer.type_of_message());
 		}
 		serverSocket.close();
 	
@@ -34,46 +39,122 @@ class SilentServer{
 	 * @param question
 	 * @return answer
 	 */
-	private static Message answer(Message question) {
+	private static Message answer(Message question) throws Exception{
+		InetAddress server_IP = InetAddress.getByName("localhost");
 		String type = question.type_of_message();
 		Message answer = null;
 		if (type=="DHCPDISCOVER"){
 			answer = new Message("DHCPOFFER");
-			byte[] IP_address = lend_IP(question.getTransactionID());
+			byte[] IP_address = lend_IP(question.getTransactionID(), question.getMacAddress());
 			answer.offerIP(IP_address);
+			answer.setServerIP(server_IP.getAddress());
 			answer.leaseTime(500);
 		}
 		else if(type == "DHCPREQUEST"){
-			
+			boolean allocate_address = block_IP(question.getTransactionID(), question.getMacAddress());
+			if (!allocate_address){
+				NAK = true;
+			}
+			NAK = true;
+			if (!NAK){
+				answer = new Message("DHCPACK");
+				byte[] IP_address = question.get_option50();
+				answer.offerIP(IP_address);
+				answer.setServerIP(server_IP.getAddress());
+				answer.leaseTime(500);
+			}
+			else{
+				answer = new Message("DHCPNAK");
+				byte[] IP_address = question.get_option50();
+				answer.offerIP(IP_address);
+				answer.setServerIP(server_IP.getAddress());
+				answer.leaseTime(500);
+				NAK = false;
+			}
 		}
 		
 		else if(type == "DHCPRELEASE"){
-			
+			release_IP(question.getTransactionID());
 		}
 		else{
 			System.out.println("We don't serve servers here.");
 		}
-		answer.server(question.getMacAddress(), question.get_raw_transaction_id());
 		
-		
+		if (type != "DHCPRELEASE"){
+			answer.server(question.getMacAddress(), question.get_raw_transaction_id());
+		}
+
 		return answer;
 		
 	}
-	
+
+	private static byte[][] mac_addresses = {null, null, null, null};
+	private static String[] transaction_ids = {null, null, null, null};
+	private static boolean[] taken = {false, false, false, false};
 	private static byte[][] available_IPs = {{(byte) 0xC0, (byte) 0xA8, 0x01, 0x61}, {(byte) 0xC0, (byte) 0xA8, 0x01, 0x62},
 			{(byte) 0xC0, (byte) 0xA8, 0x01, 0x63}, {(byte) 0xC0, (byte) 0xA8, 0x01, 0x64}};
 	
-	private static int last_lent = 3;
+	private static void printStatus(){
+		boolean used = false;
+		int i = 0;
+		while(i<4){
+			if (taken[i]){
+				used = true;
+				System.out.println(toHex(available_IPs[i]) + " is leased to: " + toHex(mac_addresses[i]));
+			}
+			i += 1;
+		}
+		if(!used){
+			System.out.println("No addresses are leased yet.");
+		}
+		
+	}
 	
-	private static byte[] lend_IP(String transactionID) {
-		if (last_lent < 3){
-			last_lent += 1;
+	
+	private static void release_IP(String transaction_id){
+		int i = 0;
+		while(i < 4){
+			if(transaction_ids[i].equals(transaction_id)){
+				taken[i] = false;
+				mac_addresses[i] = null;
+				transaction_ids[i] = null;
+				return;
+			}
+			
+			i += 1;
 		}
-		else{
-			last_lent = 0;
+		System.out.println("No IP leased with that transaction ID.");
+	}
+	
+	private static byte[] lend_IP(String transaction_id, byte[] MACAddress) {
+		int i = 0;
+		while(i<4){
+			if (!taken[i]){
+				System.out.println("Offering IP: " + toHex(available_IPs[i]));
+				transaction_ids[i] = transaction_id;
+				mac_addresses[i] = MACAddress;
+				return available_IPs[i];
+			}
+			i += 1;
 		}
-		System.out.println("Offering IP: "+toHex(available_IPs[last_lent]));
-		return available_IPs[last_lent];
+		System.out.println("All IP addresses are taken!");
+		NAK = true;
+		return available_IPs[0];
+	}
+	
+	private static boolean block_IP(String transactionID, byte[] MACAddress) {
+		int i = 0;
+		while(i<4){
+			if (transaction_ids[i].equals(transactionID)){
+				taken[i] = true;
+				mac_addresses[i] = MACAddress;
+				return true;
+			}
+			i += 1;
+		}
+		
+		System.out.println("No IP address allocated to such transactionID.");
+		return false;
 	}
 	
 	private static final char[] HEX_DIGITS = "0123456789abcdef".toCharArray();
@@ -92,4 +173,6 @@ class SilentServer{
         }
         return new String(c);
     }
+	
+
 }
